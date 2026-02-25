@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataHarvest — Smart Web Scraper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #00ff88;
+    --accent2: #7c3aed;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --danger: #ff4466;
+    --warning: #ffaa00;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 60px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .dot.green { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2s infinite; }
+  .dot.red { background: var(--danger); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Auth Section */
+  #auth-section {
+    text-align: center;
+    padding: 80px 40px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #auth-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(124,58,237,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .auth-icon {
+    font-size: 3rem;
+    margin-bottom: 24px;
+  }
+
+  #auth-section h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  #auth-section p {
+    color: var(--muted);
+    margin-bottom: 32px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .btn-google {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 28px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-google:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,255,136,0.3);
+  }
+
+  .btn-google svg { width: 20px; height: 20px; }
+
+  /* Main App */
+  #main-section { display: none; }
+
+  /* User bar */
+  .user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 32px;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+  }
+
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: white;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-sm:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--border);
+    color: var(--accent);
+  }
+
+  /* Form Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .panel h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  input[type="text"], input[type="url"], select, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  select option { background: var(--surface); }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .btn-run {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn-run:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,255,136,0.3);
+  }
+
+  .btn-run:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Log */
+  .log-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    height: 180px;
+    overflow-y: auto;
+    font-size: 0.78rem;
+    line-height: 1.7;
+  }
+
+  .log-line { margin-bottom: 2px; }
+  .log-line.info { color: var(--muted); }
+  .log-line.success { color: var(--accent); }
+  .log-line.error { color: var(--danger); }
+  .log-line.warn { color: var(--warning); }
+
+  /* Results */
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .badge {
+    padding: 4px 10px;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+
+  .btn-export {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-export:hover { background: rgba(0,255,136,0.1); }
+
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+
+  .results-table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 400;
+  }
+
+  .results-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .results-table a { color: var(--accent); text-decoration: none; }
+
+  .sheet-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 8px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    margin-top: 16px;
+  }
+
+  .sheet-link:hover { background: rgba(0,255,136,0.15); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  /* Spinner */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Sheet config */
+  .sheet-info {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 6px;
+    word-break: break-all;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #a78bfa;
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">Data<span>Harvest</span></div>
+    <div class="status-dot">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">Not connected</span>
+    </div>
+  </header>
+
+  <!-- AUTH SECTION -->
+  <div id="auth-section">
+    <div class="auth-icon">⚡</div>
+    <h2>Connect & Start Scraping</h2>
+    <p>Sign in with Google to authorize access to your Google Sheets.<br>Your scraped data will be saved automatically.</p>
+    <button class="btn-google" onclick="startGoogleAuth()">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <p style="margin-top:20px; font-size:0.72rem; color: var(--muted);">
+      A popup will open for Google authorization. Make sure popups are allowed for this page.
+    </p>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="main-section">
+
+    <div class="user-bar">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">Loading...</span>
+      </div>
+      <button class="btn-sm" onclick="signOut()">Sign out</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('web', this)">🌐 Scrape Website</button>
+      <button class="tab" onclick="switchTab('search', this)">🔍 Google Search</button>
+    </div>
+
+    <!-- WEB SCRAPER -->
+    <div id="tab-web">
+      <div class="panel">
+        <h3>⚙ Scraper Configuration</h3>
+        <div class="form-group">
+          <label>Target URL</label>
+          <input type="url" id="web-url" placeholder="https://example.com" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Max Pages</label>
+            <select id="web-maxpages">
+              <option value="1">1 page</option>
+              <option value="5" selected>5 pages</option>
+              <option value="10">10 pages</option>
+              <option value="20">20 pages</option>
+              <option value="50">50 pages</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Crawl Depth</label>
+            <select id="web-depth">
+              <option value="1" selected>Shallow (1)</option>
+              <option value="2">Medium (2)</option>
+              <option value="3">Deep (3)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Data to Extract</label>
+          <select id="web-extract">
+            <option value="text">Page Text & Content</option>
+            <option value="links">Links & URLs</option>
+            <option value="full">Full Page Data</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Google Sheet Tab Name</label>
+          <input type="text" id="web-sheet-tab" value="WebScrape" />
+        </div>
+        <button class="btn-run" id="btn-run-web" onclick="runWebScraper()">
+          <span>▶ Run Scraper</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SEARCH SCRAPER -->
+    <div id="tab-search" style="display:none">
+      <div class="panel">
+        <h3>⚙ Search Configuration</h3>
+        <div class="form-group">
+          <label>Search Query</label>
+          <input type="text" id="search-query" placeholder="e.g. best coffee shops in Cairo" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Number of Results</label>
+            <select id="search-count">
+              <option value="10" selected>10 results</option>
+              <option value="20">20 results</option>
+              <option value="50">50 results</option>
+              <option value="100">100 results</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Country</label>
+            <select id="search-country">
+              <option value="us">United States</option>
+              <option value="eg" selected>Egypt</option>
+              <option value="gb">United Kingdom</option>
+              <option value="de">Germany</option>
+              <option value="fr">France</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Google Sheet Tab Name</label>
+          <input type="text" id="search-sheet-tab" value="SearchResults" />
+        </div>
+        <button class="btn-run" id="btn-run-search" onclick="runSearchScraper()">
+          <span>▶ Run Search Scraper</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="panel">
+      <h3>📡 Live Log</h3>
+      <div class="log-box" id="log-box">
+        <div class="log-line info">// Waiting for task...</div>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="panel" id="results-panel" style="display:none">
+      <div class="results-header">
+        <div>
+          <h3 style="display:inline-block; margin-bottom:0">📊 Results</h3>
+          <span class="badge" id="result-count" style="margin-left:10px">0 rows</span>
+        </div>
+        <button class="btn-export" onclick="downloadCSV()">⬇ Download CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="results-table" id="results-table">
+          <thead id="results-head"></thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+      <a class="sheet-link" id="sheet-link" href="https://docs.google.com/spreadsheets/d/1295Iqz6jE5-7vD__WsyHqWTUMJr_4LLM3BKjNGi-2dM/edit" target="_blank">
+        📊 Open in Google Sheets
+      </a>
+    </div>
+
+  </div><!-- /main-section -->
+</div>
+
+<script>
+// =============================================
+// CONFIG
+// =============================================
+const CONFIG = {
+  clientId: '633930604616-oda4vnsest0uhg8ivci8uv2j3g7iovh7.apps.googleusercontent.com',
+  apifyKey: 'apify_api_XtsOjT1Q7mFEQS0bZbl64uQRacJq2G4FQX1q',
+  sheetId: '1295Iqz6jE5-7vD__WsyHqWTUMJr_4LLM3BKjNGi-2dM',
+  sheetUrl: 'https://docs.google.com/spreadsheets/d/1295Iqz6jE5-7vD__WsyHqWTUMJr_4LLM3BKjNGi-2dM/edit',
+  scopes: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+  redirectUri: window.location.href.split('?')[0].split('#')[0]
+};
+
+let accessToken = null;
+let currentResults = [];
+let currentHeaders = [];
+
+// =============================================
+// AUTH
+// =============================================
+function startGoogleAuth() {
+  const params = new URLSearchParams({
+    client_id: CONFIG.clientId,
+    redirect_uri: CONFIG.redirectUri,
+    response_type: 'token',
+    scope: CONFIG.scopes,
+    prompt: 'consent'
+  });
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+  
+  // Open popup
+  const popup = window.open(authUrl, 'google-auth', 'width=500,height=600,left=200,top=100');
+  
+  // Poll for redirect
+  const poll = setInterval(() => {
+    try {
+      if (popup.closed) {
+        clearInterval(poll);
+        log('Auth popup closed', 'warn');
+        return;
+      }
+      const url = popup.location.href;
+      if (url.includes('access_token')) {
+        clearInterval(poll);
+        popup.close();
+        const hash = url.split('#')[1];
+        const params = new URLSearchParams(hash);
+        accessToken = params.get('access_token');
+        handleAuthSuccess();
+      }
+    } catch(e) { /* cross-origin, still loading */ }
+  }, 500);
+}
+
+// Also handle redirect back to this page
+window.addEventListener('load', () => {
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    accessToken = params.get('access_token');
+    history.replaceState({}, '', window.location.pathname);
+    handleAuthSuccess();
+  }
+});
+
+async function handleAuthSuccess() {
+  log('✓ Google OAuth successful', 'success');
+  
+  // Get user info
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const user = await res.json();
+    
+    document.getElementById('user-name').textContent = user.email || user.name;
+    document.getElementById('user-avatar').textContent = (user.name || user.email || '?')[0].toUpperCase();
+    
+    log(`✓ Signed in as: ${user.email}`, 'success');
+  } catch(e) {
+    log('Signed in (could not load profile)', 'warn');
+  }
+
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('main-section').style.display = 'block';
+  
+  const dot = document.getElementById('status-dot');
+  dot.classList.add('green');
+  document.getElementById('status-text').textContent = 'Connected';
+}
+
+function signOut() {
+  accessToken = null;
+  document.getElementById('auth-section').style.display = 'block';
+  document.getElementById('main-section').style.display = 'none';
+  document.getElementById('status-dot').className = 'dot';
+  document.getElementById('status-text').textContent = 'Not connected';
+  clearLog();
+  log('// Signed out. Waiting for task...', 'info');
+}
+
+// =============================================
+// TABS
+// =============================================
+function switchTab(name, el) {
+  document.getElementById('tab-web').style.display = name === 'web' ? 'block' : 'none';
+  document.getElementById('tab-search').style.display = name === 'search' ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// =============================================
+// LOGGING
+// =============================================
+function log(msg, type = 'info') {
+  const box = document.getElementById('log-box');
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  const time = new Date().toLocaleTimeString();
+  line.textContent = `[${time}] ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-box').innerHTML = '';
+}
+
+// =============================================
+// APIFY - WEB SCRAPER
+// =============================================
+async function runWebScraper() {
+  const url = document.getElementById('web-url').value.trim();
+  if (!url) { log('⚠ Please enter a URL', 'warn'); return; }
+  
+  const maxPages = parseInt(document.getElementById('web-maxpages').value);
+  const depth = parseInt(document.getElementById('web-depth').value);
+  const sheetTab = document.getElementById('web-sheet-tab').value || 'WebScrape';
+  
+  setRunning('btn-run-web', true);
+  clearLog();
+  log(`Starting web scraper for: ${url}`, 'info');
+  log(`Config: ${maxPages} pages, depth ${depth}`, 'info');
+
+  try {
+    // Start Apify actor (Web Scraper)
+    log('Sending job to Apify...', 'info');
+    const runRes = await fetch(`https://api.apify.com/v2/acts/apify~web-scraper/runs?token=${CONFIG.apifyKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        startUrls: [{ url }],
+        maxCrawlPages: maxPages,
+        maxCrawlDepth: depth,
+        pageFunction: `async function pageFunction(context) {
+          const { $, request } = context;
+          return {
+            url: request.url,
+            title: $('title').text().trim(),
+            h1: $('h1').first().text().trim(),
+            description: $('meta[name="description"]').attr('content') || '',
+            text: $('body').text().replace(/\\s+/g, ' ').trim().substring(0, 500),
+            links: $('a[href]').length
+          };
+        }`
+      })
+    });
+
+    if (!runRes.ok) {
+      const err = await runRes.json();
+      throw new Error(err.error?.message || 'Apify run failed');
+    }
+
+    const run = await runRes.json();
+    const runId = run.data.id;
+    log(`✓ Job started! Run ID: ${runId}`, 'success');
+
+    // Poll for completion
+    const items = await pollApifyRun(runId);
+    
+    if (items.length === 0) {
+      log('⚠ No data returned from scraper', 'warn');
+      setRunning('btn-run-web', false);
+      return;
+    }
+
+    log(`✓ Scraped ${items.length} pages`, 'success');
+
+    // Save to Sheets
+    await saveToSheets(items, sheetTab, ['url','title','h1','description','text','links']);
+    
+    displayResults(items, ['url','title','h1','description','text','links']);
+
+  } catch(e) {
+    log(`✗ Error: ${e.message}`, 'error');
+    console.error(e);
+  }
+  
+  setRunning('btn-run-web', false);
+}
+
+// =============================================
+// APIFY - GOOGLE SEARCH
+// =============================================
+async function runSearchScraper() {
+  const query = document.getElementById('search-query').value.trim();
+  if (!query) { log('⚠ Please enter a search query', 'warn'); return; }
+  
+  const count = parseInt(document.getElementById('search-count').value);
+  const country = document.getElementById('search-country').value;
+  const sheetTab = document.getElementById('search-sheet-tab').value || 'SearchResults';
+  
+  setRunning('btn-run-search', true);
+  clearLog();
+  log(`Starting Google search scraper for: "${query}"`, 'info');
+  log(`Config: ${count} results, country: ${country.toUpperCase()}`, 'info');
+
+  try {
+    log('Sending job to Apify...', 'info');
+    const runRes = await fetch(`https://api.apify.com/v2/acts/apify~google-search-scraper/runs?token=${CONFIG.apifyKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        queries: query,
+        maxPagesPerQuery: Math.ceil(count / 10),
+        resultsPerPage: 10,
+        countryCode: country,
+        languageCode: 'en',
+        mobileResults: false
+      })
+    });
+
+    if (!runRes.ok) {
+      const err = await runRes.json();
+      throw new Error(err.error?.message || 'Apify run failed');
+    }
+
+    const run = await runRes.json();
+    const runId = run.data.id;
+    log(`✓ Job started! Run ID: ${runId}`, 'success');
+
+    const rawItems = await pollApifyRun(runId);
+    
+    // Flatten search results
+    const items = [];
+    for (const page of rawItems) {
+      if (page.organicResults) {
+        for (const r of page.organicResults) {
+          items.push({
+            position: r.position,
+            title: r.title,
+            url: r.url,
+            description: r.description,
+            query: query
+          });
+        }
+      }
+    }
+
+    if (items.length === 0) {
+      log('⚠ No search results returned', 'warn');
+      setRunning('btn-run-search', false);
+      return;
+    }
+
+    log(`✓ Got ${items.length} search results`, 'success');
+    await saveToSheets(items, sheetTab, ['position','title','url','description','query']);
+    displayResults(items, ['position','title','url','description','query']);
+
+  } catch(e) {
+    log(`✗ Error: ${e.message}`, 'error');
+    console.error(e);
+  }
+  
+  setRunning('btn-run-search', false);
+}
+
+// =============================================
+// POLL APIFY RUN
+// =============================================
+async function pollApifyRun(runId) {
+  let attempts = 0;
+  const maxAttempts = 60; // 5 min max
+  
+  while (attempts < maxAttempts) {
+    await sleep(5000);
+    attempts++;
+    
+    const statusRes = await fetch(`https://api.apify.com/v2/acts/runs/${runId}?token=${CONFIG.apifyKey}`);
+    const statusData = await statusRes.json();
+    const status = statusData.data?.status;
+    
+    log(`Status: ${status} (${attempts * 5}s elapsed)`, 'info');
+    
+    if (status === 'SUCCEEDED') {
+      log('✓ Apify job completed!', 'success');
+      const datasetId = statusData.data.defaultDatasetId;
+      const dataRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${CONFIG.apifyKey}&format=json&limit=1000`);
+      return await dataRes.json();
+    }
+    
+    if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') {
+      throw new Error(`Apify run ${status}`);
+    }
+  }
+  
+  throw new Error('Timeout waiting for Apify run');
+}
+
+// =============================================
+// GOOGLE SHEETS
+// =============================================
+async function saveToSheets(items, tabName, headers) {
+  log(`Saving ${items.length} rows to Google Sheets tab: "${tabName}"...`, 'info');
+  
+  const base = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}`;
+  const authH = { Authorization: `Bearer ${accessToken}` };
+
+  // 1. Get or create sheet tab
+  const metaRes = await fetch(base, { headers: authH });
+  const meta = await metaRes.json();
+  const sheets = meta.sheets || [];
+  const exists = sheets.find(s => s.properties.title === tabName);
+
+  if (!exists) {
+    log(`Creating new tab: "${tabName}"`, 'info');
+    await fetch(`${base}:batchUpdate`, {
+      method: 'POST',
+      headers: { ...authH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{ addSheet: { properties: { title: tabName } } }]
+      })
+    });
+  }
+
+  // 2. Write data
+  const rows = [headers, ...items.map(item => headers.map(h => String(item[h] ?? '')))];
+  const range = `${tabName}!A1`;
+  
+  const writeRes = await fetch(`${base}/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: { ...authH, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: rows })
+  });
+
+  if (!writeRes.ok) {
+    const err = await writeRes.json();
+    throw new Error(err.error?.message || 'Failed to write to Sheets');
+  }
+
+  log(`✓ Saved to Google Sheets! Tab: "${tabName}"`, 'success');
+  log(`→ ${CONFIG.sheetUrl}`, 'success');
+}
+
+// =============================================
+// DISPLAY RESULTS
+// =============================================
+function displayResults(items, headers) {
+  currentResults = items;
+  currentHeaders = headers;
+  
+  document.getElementById('results-panel').style.display = 'block';
+  document.getElementById('result-count').textContent = `${items.length} rows`;
+  
+  const head = document.getElementById('results-head');
+  const body = document.getElementById('results-body');
+  
+  head.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+  
+  const preview = items.slice(0, 50);
+  body.innerHTML = preview.map(item => `
+    <tr>${headers.map(h => {
+      const val = item[h] ?? '';
+      if (h === 'url' && val) return `<td><a href="${val}" target="_blank">${val}</a></td>`;
+      return `<td title="${String(val).replace(/"/g,'&quot;')}">${val}</td>`;
+    }).join('')}</tr>
+  `).join('');
+  
+  if (items.length > 50) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="${headers.length}" style="text-align:center;color:var(--muted);font-style:italic">... and ${items.length - 50} more rows in Google Sheets</td>`;
+    body.appendChild(tr);
+  }
+}
+
+// =============================================
+// CSV DOWNLOAD
+// =============================================
+function downloadCSV() {
+  if (!currentResults.length) return;
+  const rows = [currentHeaders, ...currentResults.map(r => currentHeaders.map(h => `"${String(r[h] ?? '').replace(/"/g,'""')}"`))]
+    .map(r => r.join(',')).join('\n');
+  const blob = new Blob([rows], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `scrape-${Date.now()}.csv`;
+  a.click();
+}
+
+// =============================================
+// HELPERS
+// =============================================
+function setRunning(btnId, running) {
+  const btn = document.getElementById(btnId);
+  if (running) {
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div><span>Running...</span>';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = '<span>▶ Run Scraper</span>';
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
